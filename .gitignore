@@ -1,0 +1,9 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.vs/
+/OnlineLibrary/Data/*.db*
+/OnlineLibrary/Data/*.zip
+/OnlineLibrary/Data/*.7z

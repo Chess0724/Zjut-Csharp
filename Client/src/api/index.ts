@@ -18,7 +18,13 @@ import type {
   BookComment,
   BookCommentRequest,
   LogEvent,
-  PaginationParams
+  PaginationParams,
+  Order,
+  CreateOrderRequest,
+  OrderStatistics,
+  CartItemDto,
+  AddToCartRequest,
+  UpdateCartQuantityRequest
 } from '@/types'
 
 // ==================== 认证相关 ====================
@@ -171,4 +177,72 @@ export const seedApi = {
   
   seedUsers: () =>
     api.post<ResultDto<null>>('/Seed/Users'),
+  
+  // 更新书籍价格
+  updateBookPrices: () =>
+    api.put<ResultDto<{ updatedBooks: number; totalBooks: number }>>('/Seed/BookPrices'),
+}
+
+// ==================== 购物车相关 ====================
+
+export const cartApi = {
+  // 获取购物车
+  getCart: () =>
+    api.get<ResultDto<CartItemDto[]>>('/cart'),
+  
+  // 添加到购物车
+  addToCart: (data: AddToCartRequest) =>
+    api.post<ResultDto<null>>('/cart', data),
+  
+  // 更新数量
+  updateQuantity: (data: UpdateCartQuantityRequest) =>
+    api.put<ResultDto<null>>('/cart', data),
+  
+  // 移除商品
+  removeFromCart: (bookId: number) =>
+    api.delete<ResultDto<null>>(`/cart/${bookId}`),
+  
+  // 清空购物车
+  clearCart: () =>
+    api.delete<ResultDto<null>>('/cart'),
+}
+
+// ==================== 订单相关 ====================
+
+export const orderApi = {
+  // 创建订单
+  createOrder: (data: CreateOrderRequest) =>
+    api.post<ResultDto<Order>>('/order', data),
+  
+  // 获取当前用户的订单列表
+  getMyOrders: (params: PaginationParams = {}) =>
+    api.get<ResultDto<Order[]>>('/order', { params }),
+  
+  // 获取订单详情
+  getOrder: (id: number) =>
+    api.get<ResultDto<Order>>(`/order/${id}`),
+  
+  // 取消订单
+  cancelOrder: (id: number) =>
+    api.post<ResultDto<null>>(`/order/${id}/cancel`),
+  
+  // 确认收货
+  confirmOrder: (id: number) =>
+    api.post<ResultDto<null>>(`/order/${id}/complete`),
+  
+  // 模拟支付
+  payOrder: (id: number) =>
+    api.post<ResultDto<null>>(`/order/${id}/pay`),
+  
+  // 管理员：获取所有订单
+  getAllOrders: (params: PaginationParams = {}) =>
+    api.get<ResultDto<Order[]>>('/order/all', { params }),
+  
+  // 管理员：发货
+  shipOrder: (id: number) =>
+    api.post<ResultDto<null>>(`/order/${id}/ship`),
+  
+  // 管理员：获取订单统计
+  getStatistics: () =>
+    api.get<ResultDto<OrderStatistics>>('/order/statistics'),
 }

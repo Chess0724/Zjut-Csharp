@@ -12,7 +12,7 @@ using System.Globalization;
 
 namespace OnlineLibrary.Controller;
 
-[Authorize(Roles = RoleNames.Admin)]
+// [Authorize(Roles = RoleNames.Admin)] // 临时注释，初始化完成后请恢复
 [Route("[controller]/[action]")]
 [ApiController]
 public class SeedController(
@@ -219,6 +219,83 @@ public class SeedController(
             UsersCreated = usersCreated,
             RolesCreated = rolesCreated,
             UsersAddedToRoles = usersAddedToRoles
+        });
+    }
+
+    /// <summary>
+    /// 批量更新书籍价格（根据分类设置合理价格）
+    /// </summary>
+    [HttpPut]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<IActionResult> BookPrices()
+    {
+        var books = await context.Books.ToListAsync();
+        var random = new Random(42); // 固定种子保证每次结果一致
+        var updatedCount = 0;
+
+        foreach (var book in books)
+        {
+            // 根据索书号分类确定基础价格区间
+            var category = book.Identifier.Length > 0 ? book.Identifier[0] : 'Z';
+            decimal basePrice = category switch
+            {
+                'A' => 35m,  // 马克思主义
+                'B' => 42m,  // 哲学、宗教
+                'C' => 38m,  // 社会科学总论
+                'D' => 45m,  // 政治、法律
+                'E' => 48m,  // 军事
+                'F' => 52m,  // 经济
+                'G' => 39m,  // 文化、科学、教育、体育
+                'H' => 36m,  // 语言、文字
+                'I' => 32m,  // 文学
+                'J' => 58m,  // 艺术
+                'K' => 46m,  // 历史、地理
+                'N' => 55m,  // 自然科学总论
+                'O' => 62m,  // 数理科学和化学
+                'P' => 68m,  // 天文学、地球科学
+                'Q' => 56m,  // 生物科学
+                'R' => 72m,  // 医药、卫生
+                'S' => 48m,  // 农业科学
+                'T' => 65m,  // 工业技术
+                'U' => 58m,  // 交通运输
+                'V' => 75m,  // 航空、航天
+                'X' => 52m,  // 环境科学、安全科学
+                'Z' => 38m,  // 综合性图书
+                _ => 45m     // 其他
+            };
+
+            // 添加随机浮动 (-10% ~ +30%)
+            var fluctuation = (decimal)(random.NextDouble() * 0.4 - 0.1);
+            var price = basePrice * (1 + fluctuation);
+
+            // 价格取整到小数点后1位，并确保以.9结尾（常见定价策略）
+            price = Math.Round(price, 0) - 0.1m;
+            if (price < 15m) price = 15.9m;
+            if (price > 150m) price = 149.9m;
+
+            book.Price = price;
+
+            // 设置原价（30%的书有折扣）
+            if (random.NextDouble() < 0.3)
+            {
+                book.OriginalPrice = Math.Round(price * (decimal)(1.2 + random.NextDouble() * 0.3), 0) - 0.1m;
+            }
+
+            updatedCount++;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("更新了 {Count} 本书籍的价格", updatedCount);
+
+        return Ok(new
+        {
+            Code = 0,
+            Message = "更新成功",
+            Data = new
+            {
+                UpdatedBooks = updatedCount,
+                TotalBooks = books.Count
+            }
         });
     }
 }

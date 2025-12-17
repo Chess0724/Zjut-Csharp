@@ -38,4 +38,16 @@ public class Book
 
     [Required]
     public uint Borrowed { get; set; }
+
+    /// <summary>
+    /// 图书售价
+    /// </summary>
+    [Column(TypeName = "decimal(10, 2)")]
+    public decimal Price { get; set; } = 39.90m;
+
+    /// <summary>
+    /// 图书原价（用于显示折扣）
+    /// </summary>
+    [Column(TypeName = "decimal(10, 2)")]
+    public decimal? OriginalPrice { get; set; }
 }

@@ -2,10 +2,11 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Book } from '@/types'
-import { getBookCoverColor, truncate } from '@/lib/utils'
+import { getBookCoverColor, formatCurrency } from '@/lib/utils'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
-import { BookOpen, User, Building2 } from 'lucide-vue-next'
+import { BookOpen, User, Building2, ShoppingCart } from 'lucide-vue-next'
+import { useCartStore } from '@/stores/cart'
 
 interface Props {
   book: Book
@@ -21,12 +22,18 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const cartStore = useCartStore()
 
 const coverColor = computed(() => getBookCoverColor(props.book.title))
 const isAvailable = computed(() => props.book.inventory > 0)
+const bookPrice = computed(() => props.book.price ?? 39.9)
 
 function goToDetail() {
   router.push({ name: 'BookDetail', params: { id: props.book.id } })
+}
+
+function handleAddToCart() {
+  cartStore.addItem(props.book, 1)
 }
 </script>
 
@@ -81,18 +88,34 @@ function goToDetail() {
         </div>
       </div>
       
+      <!-- 价格 -->
+      <div class="flex items-center justify-between pt-2 border-t">
+        <span class="text-lg font-bold text-primary">{{ formatCurrency(bookPrice) }}</span>
+        <span class="text-sm text-muted-foreground">库存 {{ book.inventory }}</span>
+      </div>
+      
       <!-- 操作按钮 -->
-      <div v-if="showActions" class="pt-2">
+      <div v-if="showActions" class="flex gap-2">
         <Button
           v-if="isAvailable"
-          class="w-full"
+          class="flex-1"
           size="sm"
           @click.stop="emit('borrow', book)"
         >
-          立即借阅
+          借阅
         </Button>
         <Button
-          v-else
+          v-if="isAvailable"
+          variant="outline"
+          size="sm"
+          class="flex items-center gap-1"
+          @click.stop="handleAddToCart"
+        >
+          <ShoppingCart class="h-4 w-4" />
+          购买
+        </Button>
+        <Button
+          v-if="!isAvailable"
           variant="outline"
           class="w-full"
           size="sm"

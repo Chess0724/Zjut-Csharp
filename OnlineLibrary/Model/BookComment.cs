@@ -24,6 +24,10 @@ public class BookComment
     public string Content { get; set; } = default!;
 
     [Required]
+    [Range(1, 5)]
+    public int Rating { get; set; } = 5;
+
+    [Required]
     public DateTime CreateTime { get; set; }
 
     public ApiUser User { get; set; } = default!;

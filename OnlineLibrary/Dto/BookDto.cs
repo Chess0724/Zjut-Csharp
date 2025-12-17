@@ -15,4 +15,8 @@ public record BookDto
     public string Identifier { get; set; } = default!;
 
     public uint Inventory { get; set; }
+
+    public decimal Price { get; set; } = 39.90m;
+
+    public decimal? OriginalPrice { get; set; }
 }

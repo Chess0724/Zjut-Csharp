@@ -19,6 +19,8 @@ export interface Book {
   inboundDate: string
   inventory: number
   borrowed: number
+  price: number        // 售价
+  originalPrice?: number  // 原价（用于显示折扣）
 }
 
 export interface BookDto {
@@ -29,6 +31,7 @@ export interface BookDto {
   publishedDate: string
   identifier: string
   inventory: number
+  price: number
 }
 
 // 借阅类型
@@ -175,4 +178,95 @@ export enum Role {
   User = 'User',
   Moderator = 'Moderator',
   Admin = 'Admin'
+}
+
+// ==================== 购物相关类型 ====================
+
+// 购物车商品（本地存储用）
+export interface CartItem {
+  book: Book
+  quantity: number
+}
+
+// 购物车商品（后端返回）
+export interface CartItemDto {
+  bookId: number
+  title: string
+  author: string
+  publisher: string
+  identifier: string
+  price: number
+  originalPrice?: number
+  quantity: number
+  inventory: number
+  addedDate: string
+}
+
+// 添加购物车请求
+export interface AddToCartRequest {
+  bookId: number
+  quantity: number
+}
+
+// 更新购物车数量请求
+export interface UpdateCartQuantityRequest {
+  bookId: number
+  quantity: number
+}
+
+// 订单状态
+export enum OrderStatus {
+  Pending = 'Pending',           // 待支付
+  Paid = 'Paid',                 // 已支付
+  Shipped = 'Shipped',           // 已发货
+  Delivered = 'Delivered',       // 已送达
+  Completed = 'Completed',       // 已完成
+  Cancelled = 'Cancelled'        // 已取消
+}
+
+// 订单项
+export interface OrderItem {
+  bookId: number
+  title: string
+  author: string
+  price: number
+  quantity: number
+}
+
+// 订单
+export interface Order {
+  id: number
+  userId: string
+  userName: string
+  items: OrderItem[]
+  totalAmount: number
+  status: OrderStatus
+  shippingAddress: string
+  contactPhone: string
+  createTime: string
+  updateTime: string
+  payTime: string | null
+  shipTime: string | null
+  deliverTime: string | null
+}
+
+// 创建订单请求
+export interface CreateOrderRequest {
+  items?: { bookId: number; quantity: number }[]
+  shippingAddress?: string
+  receiverName?: string
+  receiverPhone?: string
+  remark?: string
+}
+
+// 订单统计（管理员）
+export interface OrderStatistics {
+  totalOrders: number
+  pendingOrders: number
+  paidOrders: number
+  shippedOrders: number
+  completedOrders: number
+  cancelledOrders: number
+  totalSales: number
+  todaySales: number
 }

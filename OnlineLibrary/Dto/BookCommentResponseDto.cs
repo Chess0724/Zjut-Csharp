@@ -2,19 +2,21 @@
 
 public class CommentUnit
 {
-    public required uint Index { get; init; }
-
     public required int Id { get; init; }
+
+    public required int BookId { get; set; }
+
+    public required string UserId { get; set; } = default!;
 
     public required string UserName { get; set; } = default!;
 
-    public required string UserAvatar { get; set; } = default!;
+    public string? Avatar { get; set; }
 
-    public uint RefCommentIndex { get; set; }
+    public required string Content { get; set; } = default!;
 
-    public string Content { get; set; } = default!;
+    public int Rating { get; set; }
 
-    public string CreateTime { get; set; } = default!;
+    public required string CreateTime { get; set; } = default!;
 }
 
 public class BookCommentResponseDto

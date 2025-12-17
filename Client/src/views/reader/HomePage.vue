@@ -21,13 +21,13 @@ const searchQuery = ref('')
 const features = [
   {
     icon: BookOpen,
-    title: '海量藏书',
-    description: '涵盖各类学科领域，满足您的阅读需求'
+    title: '海量图书',
+    description: '涵盖各类学科领域，新书好书一网打尽'
   },
   {
     icon: Clock,
-    title: '便捷借阅',
-    description: '在线借阅，随时随地管理您的图书'
+    title: '借阅购买',
+    description: '支持借阅和购买，满足不同阅读需求'
   },
   {
     icon: Users,
@@ -36,8 +36,8 @@ const features = [
   },
   {
     icon: TrendingUp,
-    title: '借阅统计',
-    description: '查看您的借阅历史和阅读统计'
+    title: '订单跟踪',
+    description: '实时查看订单状态，物流信息一目了然'
   }
 ]
 
@@ -61,10 +61,10 @@ function handleSearch() {
       <div class="relative container px-4 py-24 lg:py-32">
         <div class="max-w-3xl mx-auto text-center">
           <h1 class="text-4xl lg:text-6xl font-bold text-white mb-6 font-serif">
-            探索知识的海洋
+            新华书店 · 阅读新体验
           </h1>
           <p class="text-lg lg:text-xl text-library-100 mb-10">
-            网上图书馆为您提供便捷的图书借阅服务，随时随地享受阅读的乐趣
+            提供图书购买与借阅一站式服务，让阅读触手可及
           </p>
           
           <!-- 搜索框 -->
@@ -121,7 +121,7 @@ function handleSearch() {
       <div class="text-center mb-12">
         <h2 class="text-3xl font-bold mb-4">我们的服务</h2>
         <p class="text-muted-foreground max-w-2xl mx-auto">
-          网上图书馆致力于为读者提供优质的阅读体验和便捷的借阅服务
+          新华书店致力于为读者提供优质的阅读体验和便捷的购书借书服务
         </p>
       </div>
       
@@ -148,7 +148,7 @@ function handleSearch() {
         <div class="max-w-3xl mx-auto text-center">
           <h2 class="text-3xl font-bold mb-4">开始您的阅读之旅</h2>
           <p class="text-muted-foreground mb-8">
-            注册账户即可借阅图书，追踪阅读进度，发现更多好书
+            注册账户即可购买或借阅图书，追踪阅读进度，发现更多好书
           </p>
           <div class="flex flex-wrap justify-center gap-4">
             <RouterLink to="/books">
@@ -156,9 +156,9 @@ function handleSearch() {
                 浏览图书
               </Button>
             </RouterLink>
-            <RouterLink to="/recommend">
+            <RouterLink to="/cart">
               <Button variant="outline" size="lg">
-                荐购图书
+                我的购物车
               </Button>
             </RouterLink>
           </div>

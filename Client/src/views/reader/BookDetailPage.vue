@@ -11,23 +11,27 @@ import CardContent from '@/components/ui/CardContent.vue'
 import { bookApi, userApi, commentApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/stores/cart'
 import { getBookCoverColor, getClassificationName } from '@/lib/utils'
 import type { Book, BookComment } from '@/types'
 import { 
   ArrowLeft, 
   BookOpen, 
-  User, 
   Building2, 
   Calendar,
   Tag,
   Package,
-  Star
+  Star,
+  ShoppingCart,
+  Plus,
+  Minus
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const toastStore = useToastStore()
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 
 const book = ref<Book | null>(null)
 const comments = ref<BookComment[]>([])
@@ -36,18 +40,21 @@ const borrowing = ref(false)
 const newComment = ref('')
 const newRating = ref(5)
 const submittingComment = ref(false)
+const purchaseQuantity = ref(1)
 
 const bookId = computed(() => Number(route.params.id))
 const coverColor = computed(() => book.value ? getBookCoverColor(book.value.title) : '')
-const isAvailable = computed(() => (book.value?.inventory || 0) > 0)
+const isAvailable = computed(() => (book.value?.inventory || 0) - (book.value?.borrowed || 0) > 0)
+const availableStock = computed(() => (book.value?.inventory || 0) - (book.value?.borrowed || 0))
 const classification = computed(() => book.value ? getClassificationName(book.value.identifier) : '')
+const isInCart = computed(() => book.value ? cartStore.isInCart(book.value.id) : false)
 
 async function fetchBook() {
   loading.value = true
   try {
-    const response = await bookApi.getBooks({ filterQuery: route.params.id as string })
-    if (response.data.code === 0 && response.data.data?.length) {
-      book.value = response.data.data.find(b => b.id === bookId.value) || null
+    const response = await bookApi.getBook(bookId.value)
+    if (response.data.code === 0) {
+      book.value = response.data.data
     }
     await fetchComments()
   } catch (error) {
@@ -84,6 +91,18 @@ async function handleBorrow() {
   } finally {
     borrowing.value = false
   }
+}
+
+function handleAddToCart() {
+  if (!book.value) return
+  cartStore.addItem(book.value, purchaseQuantity.value)
+}
+
+function handleBuyNow() {
+  if (!book.value) return
+  // 先加入购物车，然后跳转到购物车页面
+  cartStore.addItem(book.value, purchaseQuantity.value)
+  router.push('/cart')
 }
 
 async function submitComment() {
@@ -202,17 +221,77 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- 借阅按钮 -->
-            <div class="pt-4">
+            <!-- 价格显示 -->
+            <div class="flex items-baseline gap-3 pt-2">
+              <span class="text-3xl font-bold text-primary">¥{{ (book.price || 0).toFixed(2) }}</span>
+              <span v-if="book.originalPrice && book.originalPrice > book.price" class="text-lg text-muted-foreground line-through">
+                ¥{{ book.originalPrice.toFixed(2) }}
+              </span>
+              <Badge v-if="book.originalPrice && book.originalPrice > book.price" variant="destructive">
+                {{ Math.round((1 - book.price / book.originalPrice) * 100) }}% OFF
+              </Badge>
+            </div>
+            
+            <!-- 购买数量选择 -->
+            <div class="flex items-center gap-4 pt-2">
+              <span class="text-sm text-muted-foreground">数量：</span>
+              <div class="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  :disabled="purchaseQuantity <= 1"
+                  @click="purchaseQuantity--"
+                >
+                  <Minus class="h-4 w-4" />
+                </Button>
+                <span class="w-12 text-center font-medium">{{ purchaseQuantity }}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  :disabled="purchaseQuantity >= availableStock"
+                  @click="purchaseQuantity++"
+                >
+                  <Plus class="h-4 w-4" />
+                </Button>
+              </div>
+              <span class="text-sm text-muted-foreground">库存 {{ availableStock }} 件</span>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div class="flex flex-wrap gap-4 pt-4">
+              <!-- 加入购物车 -->
               <Button
                 v-if="isAvailable"
+                variant="outline"
+                size="lg"
+                @click="handleAddToCart"
+              >
+                <ShoppingCart class="h-4 w-4 mr-2" />
+                {{ isInCart ? '已在购物车' : '加入购物车' }}
+              </Button>
+              
+              <!-- 立即购买 -->
+              <Button
+                v-if="isAvailable"
+                size="lg"
+                @click="handleBuyNow"
+              >
+                立即购买
+              </Button>
+              
+              <!-- 借阅按钮 -->
+              <Button
+                v-if="isAvailable"
+                variant="secondary"
                 size="lg"
                 :loading="borrowing"
                 @click="handleBorrow"
               >
-                立即借阅
+                <BookOpen class="h-4 w-4 mr-2" />
+                借阅
               </Button>
-              <Button v-else size="lg" disabled>
+              
+              <Button v-if="!isAvailable" size="lg" disabled>
                 暂无库存
               </Button>
             </div>

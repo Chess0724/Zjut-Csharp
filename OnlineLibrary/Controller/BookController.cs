@@ -51,6 +51,31 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
         };
     }
 
+    [Authorize]
+    [HttpGet("{id}")]
+    [ResponseCache(Location = ResponseCacheLocation.Any, Duration = 60)]
+    public async Task<ResultDto<Book>> GetBook(int id)
+    {
+        var book = await context.Books.FindAsync(id);
+        if (book == null)
+        {
+            return new ResultDto<Book>
+            {
+                Code = 1,
+                Message = "Not Found",
+                Data = null
+            };
+        }
+        
+        logger.LogInformation("Got book {BookId}: {Title}", id, book.Title);
+        return new ResultDto<Book>
+        {
+            Code = 0,
+            Message = "OK",
+            Data = book
+        };
+    }
+
     [Authorize(Roles = RoleNames.Moderator)]
     [HttpPost]
     [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
@@ -65,7 +90,9 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
             Identifier = bookDto.Identifier,
             InboundDate = DateTime.Now,
             Inventory = bookDto.Inventory,
-            Borrowed = 0
+            Borrowed = 0,
+            Price = bookDto.Price,
+            OriginalPrice = bookDto.OriginalPrice
         };
         context.Books.Add(book);
         await context.SaveChangesAsync();
@@ -98,6 +125,8 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
         book.PublishedDate = bookDto.PublishedDate;
         book.Identifier = bookDto.Identifier;
         book.Inventory = bookDto.Inventory;
+        book.Price = bookDto.Price;
+        book.OriginalPrice = bookDto.OriginalPrice;
         await context.SaveChangesAsync();
 
         logger.LogInformation("Updated book {Book}", book);

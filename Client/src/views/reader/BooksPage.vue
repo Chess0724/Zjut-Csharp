@@ -100,7 +100,7 @@ onMounted(() => {
       <!-- 页面标题 -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold mb-2">图书搜索</h1>
-        <p class="text-muted-foreground">浏览和搜索馆藏图书</p>
+        <p class="text-muted-foreground">浏览和搜索全部图书，支持购买或借阅</p>
       </div>
       
       <!-- 搜索和筛选 -->

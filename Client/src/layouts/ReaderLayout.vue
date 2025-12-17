@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCartStore } from '@/stores/cart'
 import Button from '@/components/ui/Button.vue'
 import Avatar from '@/components/ui/Avatar.vue'
 import LoginModal from '@/components/auth/LoginModal.vue'
@@ -13,17 +14,21 @@ import {
   LogOut,
   LayoutDashboard,
   Menu,
-  X
+  X,
+  ShoppingCart,
+  Package
 } from 'lucide-vue-next'
 import { ref } from 'vue'
 
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 const route = useRoute()
 const mobileMenuOpen = ref(false)
 
 const navItems = computed(() => [
-  { name: '图书搜索', to: '/books', icon: BookOpen, requiresAuth: true },
+  { name: '图书商城', to: '/books', icon: BookOpen, requiresAuth: false },
   { name: '我的借阅', to: '/my-borrows', icon: User, requiresAuth: true },
+  { name: '我的订单', to: '/orders', icon: Package, requiresAuth: true },
   { name: '借阅历史', to: '/history', icon: History, requiresAuth: true },
   { name: '荐购图书', to: '/recommend', icon: Heart, requiresAuth: true },
 ])
@@ -45,7 +50,7 @@ function closeMobileMenu() {
         <!-- Logo -->
         <RouterLink to="/" class="flex items-center gap-2 text-xl font-bold text-primary">
           <BookOpen class="h-6 w-6" />
-          <span class="hidden sm:inline">网上图书馆</span>
+          <span class="hidden sm:inline">新华书店</span>
         </RouterLink>
         
         <!-- 桌面端导航 -->
@@ -66,6 +71,20 @@ function closeMobileMenu() {
         
         <!-- 用户区域 -->
         <div class="flex items-center gap-4">
+          <!-- 购物车 -->
+          <RouterLink 
+            to="/cart" 
+            class="relative flex items-center text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ShoppingCart class="h-5 w-5" />
+            <span 
+              v-if="cartStore.itemCount > 0"
+              class="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center"
+            >
+              {{ cartStore.itemCount > 99 ? '99+' : cartStore.itemCount }}
+            </span>
+          </RouterLink>
+          
           <template v-if="authStore.isLoggedIn">
             <!-- 管理端入口 -->
             <RouterLink

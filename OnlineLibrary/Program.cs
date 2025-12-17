@@ -31,6 +31,7 @@ builder.Host.UseSerilog((ctx, lc) =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor(); // 为 CartController 和 OrderController 提供用户上下文
 
 // CORS Configuration
 builder.Services.AddCors(opt =>

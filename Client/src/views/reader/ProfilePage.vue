@@ -43,7 +43,7 @@ async function handleUpdate() {
       updateData.newPassword = form.value.newPassword
     }
     
-    const response = await authApi.updateInfo(updateData)
+    await authApi.updateInfo(updateData)
     toastStore.success('信息更新成功')
     await authStore.fetchUserInfo()
     
@@ -80,7 +80,7 @@ async function handleAvatarUpload(event: Event) {
 onMounted(() => {
   if (authStore.user) {
     form.value.email = authStore.user.email || ''
-    form.value.phone = authStore.user.phone || ''
+    form.value.phone = authStore.user.phoneNumber || ''
   }
 })
 </script>
@@ -126,11 +126,9 @@ onMounted(() => {
                 <p class="text-muted-foreground">{{ authStore.user?.email }}</p>
                 <div class="flex flex-wrap gap-2 mt-2 justify-center sm:justify-start">
                   <Badge 
-                    v-for="role in authStore.user?.roles" 
-                    :key="role"
-                    :variant="role === 'Admin' ? 'destructive' : role === 'Moderator' ? 'default' : 'secondary'"
+                    :variant="authStore.user?.role === 'Admin' ? 'destructive' : authStore.user?.role === 'Moderator' ? 'default' : 'secondary'"
                   >
-                    {{ role }}
+                    {{ authStore.user?.role }}
                   </Badge>
                 </div>
               </div>

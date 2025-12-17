@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Button from '@/components/ui/Button.vue'
 import Avatar from '@/components/ui/Avatar.vue'
@@ -16,12 +16,12 @@ import {
   LogOut,
   Home,
   Menu,
-  X
+  X,
+  ShoppingBag
 } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const route = useRoute()
-const router = useRouter()
 const sidebarCollapsed = ref(false)
 const mobileSidebarOpen = ref(false)
 
@@ -37,6 +37,7 @@ const navItems = computed<NavItem[]>(() => [
   { name: '仪表盘', to: '/admin', icon: LayoutDashboard },
   { name: '图书管理', to: '/admin/books', icon: BookOpen },
   { name: '借阅管理', to: '/admin/borrows', icon: BookMarked },
+  { name: '订单管理', to: '/admin/orders', icon: ShoppingBag },
   { name: '用户管理', to: '/admin/users', icon: Users, requiresRole: 'Admin' },
   { name: '荐购管理', to: '/admin/recommends', icon: MessageSquare },
   { name: '系统日志', to: '/admin/logs', icon: FileText, requiresRole: 'Admin' },
@@ -190,7 +191,7 @@ function isActive(path: string) {
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium truncate">{{ authStore.user?.userName }}</p>
             <p class="text-xs text-muted-foreground truncate">
-              {{ authStore.user?.roles?.join(', ') }}
+              {{ authStore.user?.role }}
             </p>
           </div>
         </div>

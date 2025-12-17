@@ -7,4 +7,6 @@ public class BookCommentRequestDto
     public required int RefCommentId { get; set; }
 
     public required string Content { get; set; } = default!;
+
+    public int Rating { get; set; } = 5;
 }

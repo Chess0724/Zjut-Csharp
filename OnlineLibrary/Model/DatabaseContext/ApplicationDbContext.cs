@@ -25,6 +25,12 @@ public class ApplicationDbContext : IdentityDbContext<ApiUser>
 
     public DbSet<BookComment> BookComments => Set<BookComment>();
 
+    public DbSet<CartItem> CartItems => Set<CartItem>();
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -53,6 +59,51 @@ public class ApplicationDbContext : IdentityDbContext<ApiUser>
             .HasOne(x => x.User)
             .WithMany() // 如果 ApiUser 类中没有对应的集合导航属性，可以使用无参数的 WithMany 方法
             .HasForeignKey(x => x.UserId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // 购物车项配置
+        modelBuilder.Entity<CartItem>()
+            .HasKey(i => new { i.BookId, i.UserId });
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(x => x.User)
+            .WithMany(y => y.CartItems)
+            .HasForeignKey(x => x.UserId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(x => x.Book)
+            .WithMany()
+            .HasForeignKey(x => x.BookId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // 订单配置
+        modelBuilder.Entity<Order>()
+            .HasOne(x => x.User)
+            .WithMany(y => y.Orders)
+            .HasForeignKey(x => x.UserId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Order>()
+            .HasIndex(x => x.OrderNo)
+            .IsUnique();
+
+        // 订单项配置
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(x => x.Order)
+            .WithMany(y => y.OrderItems)
+            .HasForeignKey(x => x.OrderId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<OrderItem>()
+            .HasOne(x => x.Book)
+            .WithMany()
+            .HasForeignKey(x => x.BookId)
             .IsRequired()
             .OnDelete(DeleteBehavior.NoAction);
     }

@@ -45,6 +45,18 @@ const readerRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/reader/RecommendPage.vue'),
     meta: { title: '荐购图书', requiresAuth: true }
   },
+  {
+    path: '/cart',
+    name: 'Cart',
+    component: () => import('@/views/reader/CartPage.vue'),
+    meta: { title: '购物车' }
+  },
+  {
+    path: '/orders',
+    name: 'Orders',
+    component: () => import('@/views/reader/OrdersPage.vue'),
+    meta: { title: '我的订单', requiresAuth: true }
+  },
 ]
 
 // 管理端页面
@@ -72,6 +84,12 @@ const adminRoutes: RouteRecordRaw[] = [
         name: 'AdminBorrows',
         component: () => import('@/views/admin/BorrowsManagePage.vue'),
         meta: { title: '借阅管理' }
+      },
+      {
+        path: 'orders',
+        name: 'AdminOrders',
+        component: () => import('@/views/admin/OrdersManagePage.vue'),
+        meta: { title: '订单管理' }
       },
       {
         path: 'users',

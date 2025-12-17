@@ -4,9 +4,11 @@ import Card from '@/components/ui/Card.vue'
 import CardHeader from '@/components/ui/CardHeader.vue'
 import CardTitle from '@/components/ui/CardTitle.vue'
 import CardContent from '@/components/ui/CardContent.vue'
-import { adminApi } from '@/api'
+import Button from '@/components/ui/Button.vue'
+import { adminApi, seedApi } from '@/api'
 import type { AdminStatistics } from '@/types'
 import { classificationNames } from '@/lib/utils'
+import { useToastStore } from '@/stores/toast'
 import { 
   BookOpen, 
   Users, 
@@ -14,12 +16,16 @@ import {
   Clock, 
   MessageSquare,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  RefreshCw,
+  DollarSign
 } from 'lucide-vue-next'
 import * as echarts from 'echarts'
 
+const toastStore = useToastStore()
 const statistics = ref<AdminStatistics | null>(null)
 const loading = ref(true)
+const updatingPrices = ref(false)
 
 const monthlyChartRef = ref<HTMLDivElement | null>(null)
 const classificationChartRef = ref<HTMLDivElement | null>(null)
@@ -153,6 +159,24 @@ function initCharts() {
   }
 }
 
+// 更新所有书籍价格
+async function updateBookPrices() {
+  if (updatingPrices.value) return
+  
+  updatingPrices.value = true
+  try {
+    const response = await seedApi.updateBookPrices()
+    if (response.data) {
+      toastStore.success(`成功更新 ${response.data.data?.updatedBooks || 0} 本书籍价格`)
+    }
+  } catch (error) {
+    console.error('更新价格失败:', error)
+    toastStore.error('更新价格失败，请重试')
+  } finally {
+    updatingPrices.value = false
+  }
+}
+
 onMounted(() => {
   fetchStatistics()
 })
@@ -161,9 +185,31 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <!-- 页面标题 -->
-    <div>
-      <h1 class="text-2xl font-bold">仪表盘</h1>
-      <p class="text-muted-foreground">图书馆运营数据概览</p>
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">仪表盘</h1>
+        <p class="text-muted-foreground">图书馆运营数据概览</p>
+      </div>
+      <div class="flex gap-2">
+        <Button 
+          variant="outline" 
+          size="sm"
+          @click="updateBookPrices"
+          :disabled="updatingPrices"
+        >
+          <DollarSign class="w-4 h-4 mr-1" />
+          {{ updatingPrices ? '更新中...' : '初始化书籍价格' }}
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          @click="fetchStatistics"
+          :disabled="loading"
+        >
+          <RefreshCw :class="['w-4 h-4 mr-1', { 'animate-spin': loading }]" />
+          刷新数据
+        </Button>
+      </div>
     </div>
     
     <!-- KPI 卡片 -->

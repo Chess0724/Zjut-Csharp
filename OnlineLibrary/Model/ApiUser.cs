@@ -11,4 +11,8 @@ public class ApiUser : IdentityUser
     public ICollection<CurrentBorrow> CurrentBorrows { get; set; } = null!;
 
     public ICollection<BorrowHistory> BorrowHistories { get; set; } = null!;
+
+    public ICollection<CartItem> CartItems { get; set; } = null!;
+
+    public ICollection<Order> Orders { get; set; } = null!;
 }

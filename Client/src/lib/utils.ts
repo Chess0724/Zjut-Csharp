@@ -78,8 +78,13 @@ export function truncate(text: string, length: number): string {
   return text.slice(0, length) + '...'
 }
 
+// 格式化货币
+export function formatCurrency(amount: number): string {
+  return `¥${amount.toFixed(2)}`
+}
+
 // 防抖函数
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: any[]) => any>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {

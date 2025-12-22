@@ -90,6 +90,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
             Identifier = bookDto.Identifier,
             InboundDate = DateTime.Now,
             Inventory = bookDto.Inventory,
+            SaleInventory = bookDto.SaleInventory,
             Borrowed = 0,
             Price = bookDto.Price,
             OriginalPrice = bookDto.OriginalPrice
@@ -125,6 +126,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
         book.PublishedDate = bookDto.PublishedDate;
         book.Identifier = bookDto.Identifier;
         book.Inventory = bookDto.Inventory;
+        book.SaleInventory = bookDto.SaleInventory;
         book.Price = bookDto.Price;
         book.OriginalPrice = bookDto.OriginalPrice;
         await context.SaveChangesAsync();

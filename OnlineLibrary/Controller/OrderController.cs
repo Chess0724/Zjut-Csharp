@@ -169,10 +169,10 @@ public class OrderController(
                         return new ResultDto<OrderResponseDto> { Code = 1, Message = $"书籍ID {item.BookId} 不存在" };
                     }
 
-                    // 检查库存（Inventory 就是当前可用库存）
-                    if (item.Quantity > book.Inventory)
+                    // 检查销售库存（购买使用 SaleInventory）
+                    if (item.Quantity > book.SaleInventory)
                     {
-                        return new ResultDto<OrderResponseDto> { Code = 2, Message = $"《{book.Title}》库存不足" };
+                        return new ResultDto<OrderResponseDto> { Code = 2, Message = $"《{book.Title}》销售库存不足" };
                     }
 
                     orderItems.Add((book, item.Quantity));
@@ -194,10 +194,10 @@ public class OrderController(
                 // 检查库存
                 foreach (var item in cartItems)
                 {
-                    // 检查库存（Inventory 就是当前可用库存）
-                    if (item.Quantity > item.Book.Inventory)
+                    // 检查销售库存（购买使用 SaleInventory）
+                    if (item.Quantity > item.Book.SaleInventory)
                     {
-                        return new ResultDto<OrderResponseDto> { Code = 2, Message = $"《{item.Book.Title}》库存不足" };
+                        return new ResultDto<OrderResponseDto> { Code = 2, Message = $"《{item.Book.Title}》销售库存不足" };
                     }
                 }
 
@@ -226,7 +226,7 @@ public class OrderController(
             context.Orders.Add(order);
             await context.SaveChangesAsync();
 
-            // 创建订单项并减少库存
+            // 创建订单项并减少销售库存
             foreach (var (book, quantity) in orderItems)
             {
                 var orderItem = new OrderItem
@@ -240,8 +240,8 @@ public class OrderController(
                 };
                 context.OrderItems.Add(orderItem);
 
-                // 减少库存（这里把售出的书从库存中扣除）
-                book.Inventory -= (uint)quantity;
+                // 减少销售库存（购买的书从销售库存中扣除）
+                book.SaleInventory -= (uint)quantity;
             }
 
             await context.SaveChangesAsync();
@@ -329,13 +329,13 @@ public class OrderController(
             return new ResultDto<string> { Code = 2, Message = "该订单状态无法取消" };
         }
 
-        // 恢复库存
+        // 恢复销售库存
         foreach (var item in order.OrderItems)
         {
             var book = await context.Books.FindAsync(item.BookId);
             if (book != null)
             {
-                book.Inventory += (uint)item.Quantity;
+                book.SaleInventory += (uint)item.Quantity;
             }
         }
 

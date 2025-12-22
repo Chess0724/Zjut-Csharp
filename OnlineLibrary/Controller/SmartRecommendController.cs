@@ -28,7 +28,7 @@ public class SmartRecommendController(
     /// <returns>推荐的书籍列表</returns>
     [Authorize]
     [HttpGet]
-    [ResponseCache(Duration = 300, VaryByHeader = "Authorization")] // 缓存5分钟
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<ResultDto<BookRecommendationDto[]>> GetRecommendations(int count = 10)
     {
         try

@@ -17,10 +17,11 @@ export interface Book {
   publishedDate: string
   identifier: string
   inboundDate: string
-  inventory: number
-  borrowed: number
-  price: number        // 售价
-  originalPrice?: number  // 原价（用于显示折扣）
+  inventory: number      // 借阅库存
+  borrowed: number       // 已借出数量
+  saleInventory: number  // 销售库存
+  price: number          // 售价
+  originalPrice?: number // 原价（用于显示折扣）
 }
 
 export interface BookDto {

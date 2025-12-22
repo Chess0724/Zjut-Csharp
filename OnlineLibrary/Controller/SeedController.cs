@@ -298,4 +298,42 @@ public class SeedController(
             }
         });
     }
+
+    /// <summary>
+    /// 初始化所有书籍的销售库存
+    /// 为所有 SaleInventory 为 0 的书籍设置默认销售库存
+    /// </summary>
+    [HttpPut]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<IActionResult> InitSaleInventory()
+    {
+        var books = await context.Books
+            .Where(b => b.SaleInventory == 0)
+            .ToListAsync();
+
+        var random = new Random();
+        var updatedCount = 0;
+
+        foreach (var book in books)
+        {
+            // 销售库存设置为借阅库存的5-10倍（随机）
+            var multiplier = random.Next(5, 11);
+            book.SaleInventory = Math.Max(50, book.Inventory * (uint)multiplier);
+            updatedCount++;
+        }
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("初始化了 {Count} 本书籍的销售库存", updatedCount);
+
+        return Ok(new
+        {
+            Code = 0,
+            Message = "初始化销售库存成功",
+            Data = new
+            {
+                UpdatedBooks = updatedCount,
+                TotalBooks = await context.Books.CountAsync()
+            }
+        });
+    }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ReaderLayout from '@/layouts/ReaderLayout.vue'
 import Button from '@/components/ui/Button.vue'
@@ -8,7 +8,8 @@ import Card from '@/components/ui/Card.vue'
 import CardHeader from '@/components/ui/CardHeader.vue'
 import CardTitle from '@/components/ui/CardTitle.vue'
 import CardContent from '@/components/ui/CardContent.vue'
-import { bookApi, userApi, commentApi } from '@/api'
+import { bookApi, userApi, commentApi, aiApi } from '@/api'
+import type { BookAISummary, BookSuitability } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useCartStore } from '@/stores/cart'
@@ -24,7 +25,10 @@ import {
   Star,
   ShoppingCart,
   Plus,
-  Minus
+  Minus,
+  Sparkles,
+  ThumbsUp,
+  Loader2
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -42,12 +46,47 @@ const newRating = ref(5)
 const submittingComment = ref(false)
 const purchaseQuantity = ref(1)
 
+// AI 相关状态
+const aiSummary = ref<BookAISummary | null>(null)
+const aiSuitability = ref<BookSuitability | null>(null)
+const loadingAISummary = ref(false)
+const loadingAISuitability = ref(false)
+
 const bookId = computed(() => Number(route.params.id))
 const coverColor = computed(() => book.value ? getBookCoverColor(book.value.title) : '')
-const isAvailable = computed(() => (book.value?.inventory || 0) - (book.value?.borrowed || 0) > 0)
-const availableStock = computed(() => (book.value?.inventory || 0) - (book.value?.borrowed || 0))
+// 借阅可用库存 = 借阅库存 - 已借出，最小为 0
+const availableBorrowStock = computed(() => Math.max(0, (book.value?.inventory || 0) - (book.value?.borrowed || 0)))
+// 销售库存
+const availableSaleStock = computed(() => book.value?.saleInventory || 0)
+// 是否可借阅
+const canBorrow = computed(() => availableBorrowStock.value > 0)
+// 是否可购买
+const canBuy = computed(() => availableSaleStock.value > 0)
 const classification = computed(() => book.value ? getClassificationName(book.value.identifier) : '')
 const isInCart = computed(() => book.value ? cartStore.isInCart(book.value.id) : false)
+
+// 简单的 Markdown 格式化函数
+function formatMarkdown(text: string): string {
+  if (!text) return ''
+  return text
+    // 处理标题
+    .replace(/^### (.+)$/gm, '<h4 class="font-semibold text-base mt-4 mb-2">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 class="font-semibold text-lg mt-4 mb-2">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h2 class="font-bold text-xl mt-4 mb-2">$1</h2>')
+    // 处理加粗
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // 处理斜体
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // 处理无序列表
+    .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
+    .replace(/(<li.*<\/li>\n?)+/g, '<ul class="list-disc list-inside my-2">$&</ul>')
+    // 处理有序列表
+    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4">$1</li>')
+    // 处理换行
+    .replace(/\n\n/g, '</p><p class="my-2">')
+    .replace(/\n/g, '<br>')
+    // 包装段落
+}
 
 async function fetchBook() {
   loading.value = true
@@ -137,7 +176,59 @@ function goBack() {
   router.back()
 }
 
+// AI 功能
+async function generateAISummary() {
+  if (!book.value) return
+  
+  loadingAISummary.value = true
+  try {
+    const response = await aiApi.generateBookSummary(book.value.id)
+    aiSummary.value = response.data
+    if (!response.data.success) {
+      toastStore.error(response.data.error || 'AI 生成失败')
+    }
+  } catch (error: any) {
+    toastStore.error(error?.response?.data?.error || 'AI 服务暂时不可用')
+  } finally {
+    loadingAISummary.value = false
+  }
+}
+
+async function analyzeAISuitability() {
+  if (!book.value) return
+  
+  if (!authStore.isLoggedIn) {
+    toastStore.warning('请先登录以获取个性化分析')
+    return
+  }
+  
+  loadingAISuitability.value = true
+  try {
+    const response = await aiApi.analyzeBookSuitability(book.value.id)
+    aiSuitability.value = response.data
+    if (!response.data.success) {
+      toastStore.error(response.data.error || '分析失败')
+    }
+  } catch (error: any) {
+    toastStore.error(error?.response?.data?.error || 'AI 服务暂时不可用')
+  } finally {
+    loadingAISuitability.value = false
+  }
+}
+
+// 获取适合度分数颜色
+function getSuitabilityColor(score: number) {
+  if (score >= 80) return 'text-green-600 bg-green-100'
+  if (score >= 60) return 'text-yellow-600 bg-yellow-100'
+  return 'text-red-600 bg-red-100'
+}
+
 onMounted(() => {
+  fetchBook()
+})
+
+// 页面重新激活时刷新数据（从其他页面返回时）
+onActivated(() => {
   fetchBook()
 })
 </script>
@@ -191,8 +282,8 @@ onMounted(() => {
             <div>
               <div class="flex items-start justify-between gap-4 mb-2">
                 <h1 class="text-3xl font-bold font-serif">{{ book.title }}</h1>
-                <Badge :variant="isAvailable ? 'success' : 'destructive'" class="flex-shrink-0">
-                  {{ isAvailable ? `库存 ${book.inventory}` : '暂无库存' }}
+                <Badge :variant="canBorrow || canBuy ? 'success' : 'destructive'" class="flex-shrink-0">
+                  {{ canBorrow ? `可借 ${availableBorrowStock} 本` : (canBuy ? '仅可购买' : '暂无库存') }}
                 </Badge>
               </div>
               <p class="text-xl text-muted-foreground">{{ book.author }}</p>
@@ -248,20 +339,24 @@ onMounted(() => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  :disabled="purchaseQuantity >= availableStock"
+                  :disabled="purchaseQuantity >= availableSaleStock"
                   @click="purchaseQuantity++"
                 >
                   <Plus class="h-4 w-4" />
                 </Button>
               </div>
-              <span class="text-sm text-muted-foreground">库存 {{ availableStock }} 件</span>
+              <div class="text-sm text-muted-foreground">
+                <span>可借 {{ availableBorrowStock }}</span>
+                <span class="mx-2">|</span>
+                <span>可购 {{ availableSaleStock }}</span>
+              </div>
             </div>
             
             <!-- 操作按钮 -->
             <div class="flex flex-wrap gap-4 pt-4">
               <!-- 加入购物车 -->
               <Button
-                v-if="isAvailable"
+                v-if="canBuy"
                 variant="outline"
                 size="lg"
                 @click="handleAddToCart"
@@ -272,7 +367,7 @@ onMounted(() => {
               
               <!-- 立即购买 -->
               <Button
-                v-if="isAvailable"
+                v-if="canBuy"
                 size="lg"
                 @click="handleBuyNow"
               >
@@ -281,7 +376,7 @@ onMounted(() => {
               
               <!-- 借阅按钮 -->
               <Button
-                v-if="isAvailable"
+                v-if="canBorrow"
                 variant="secondary"
                 size="lg"
                 :loading="borrowing"
@@ -291,12 +386,127 @@ onMounted(() => {
                 借阅
               </Button>
               
-              <Button v-if="!isAvailable" size="lg" disabled>
+              <Button v-if="!canBorrow && !canBuy" size="lg" disabled>
                 暂无库存
               </Button>
             </div>
           </div>
         </div>
+        
+        <!-- AI 智能简介卡片 -->
+        <Card>
+          <CardHeader class="pb-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <Sparkles class="h-5 w-5 text-primary" />
+                <CardTitle>AI 智能简介</CardTitle>
+                <span class="text-xs text-muted-foreground">· 通义千问</span>
+              </div>
+              <div class="flex gap-2">
+                <Button
+                  size="sm"
+                  :loading="loadingAISummary"
+                  @click="generateAISummary"
+                >
+                  <Sparkles v-if="!loadingAISummary" class="h-4 w-4 mr-1" />
+                  生成简介
+                </Button>
+                <Button
+                  v-if="authStore.isLoggedIn"
+                  variant="outline"
+                  size="sm"
+                  :loading="loadingAISuitability"
+                  @click="analyzeAISuitability"
+                >
+                  <ThumbsUp v-if="!loadingAISuitability" class="h-4 w-4 mr-1" />
+                  适合度分析
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <!-- 未生成时的提示 -->
+            <div 
+              v-if="!aiSummary && !aiSuitability && !loadingAISummary && !loadingAISuitability" 
+              class="text-center py-8 text-muted-foreground"
+            >
+              <Sparkles class="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>点击上方按钮，让 AI 为您生成这本书的智能简介</p>
+              <p v-if="!authStore.isLoggedIn" class="text-sm mt-1">登录后可获取个性化推荐分析</p>
+            </div>
+            
+            <!-- 加载中 -->
+            <div v-if="loadingAISummary || loadingAISuitability" class="py-8">
+              <div class="flex items-center justify-center gap-3">
+                <Loader2 class="h-6 w-6 animate-spin text-primary" />
+                <span class="text-muted-foreground">
+                  {{ loadingAISummary ? 'AI 正在分析书籍信息...' : 'AI 正在分析您的阅读偏好...' }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- AI 简介结果 -->
+            <div v-if="aiSummary?.success && !loadingAISummary" class="space-y-4">
+              <div 
+                class="prose prose-sm max-w-none text-foreground leading-relaxed"
+                v-html="formatMarkdown(aiSummary.summary)"
+              />
+              <div class="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
+                <span v-if="aiSummary.hasUserContext" class="flex items-center gap-1">
+                  <ThumbsUp class="h-3 w-3" /> 已结合您的阅读历史
+                </span>
+                <span v-else></span>
+                <span>生成于 {{ new Date(aiSummary.generatedAt).toLocaleString() }}</span>
+              </div>
+            </div>
+            
+            <!-- 适合度分析结果 -->
+            <div v-if="aiSuitability?.success && !loadingAISuitability" class="mt-6 pt-6 border-t">
+              <div class="flex items-center gap-2 mb-4">
+                <ThumbsUp class="h-5 w-5 text-primary" />
+                <h4 class="font-semibold">个性化推荐分析</h4>
+              </div>
+              
+              <div class="grid gap-4 sm:grid-cols-[auto_1fr]">
+                <!-- 左侧评分 -->
+                <div class="flex sm:flex-col items-center gap-3 sm:gap-1">
+                  <div 
+                    :class="[
+                      'w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl',
+                      getSuitabilityColor(aiSuitability.suitabilityScore)
+                    ]"
+                  >
+                    {{ aiSuitability.suitabilityScore }}
+                  </div>
+                  <Badge 
+                    :variant="aiSuitability.suitabilityScore >= 70 ? 'success' : 'secondary'"
+                  >
+                    {{ aiSuitability.recommendation }}
+                  </Badge>
+                </div>
+                
+                <!-- 右侧分析 -->
+                <div class="space-y-3">
+                  <p class="text-sm text-muted-foreground">{{ aiSuitability.analysis }}</p>
+                  
+                  <div v-if="aiSuitability.reasons.length > 0">
+                    <h5 class="text-sm font-medium mb-2">推荐理由：</h5>
+                    <ul class="grid gap-1.5">
+                      <li 
+                        v-for="(reason, index) in aiSuitability.reasons" 
+                        :key="index"
+                        class="flex items-start gap-2 text-sm text-muted-foreground"
+                      >
+                        <span class="text-primary shrink-0">✓</span>
+                        {{ reason }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
         <!-- 评论区 -->
         <Card>

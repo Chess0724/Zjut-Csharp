@@ -14,7 +14,15 @@ public record BookDto
 
     public string Identifier { get; set; } = default!;
 
+    /// <summary>
+    /// 借阅库存
+    /// </summary>
     public uint Inventory { get; set; }
+
+    /// <summary>
+    /// 销售库存
+    /// </summary>
+    public uint SaleInventory { get; set; } = 100;
 
     public decimal Price { get; set; } = 39.90m;
 

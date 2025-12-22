@@ -129,6 +129,10 @@ builder.Services.AddDbContext<LogsDbContext>(opt =>
 // 注册书籍推荐服务
 builder.Services.AddScoped<BookRecommendationService>();
 
+// 注册 AI 服务
+builder.Services.AddHttpClient<AIService>();
+builder.Services.AddScoped<AIService>();
+
 var app = builder.Build();
 
 // Pre-warm the database connection by executing a simple query

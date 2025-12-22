@@ -25,7 +25,14 @@ const router = useRouter()
 const cartStore = useCartStore()
 
 const coverColor = computed(() => getBookCoverColor(props.book.title))
-const isAvailable = computed(() => props.book.inventory > 0)
+// 借阅可用库存 = 借阅库存 - 已借出，最小为 0
+const availableBorrowStock = computed(() => Math.max(0, (props.book.inventory || 0) - (props.book.borrowed || 0)))
+// 销售库存
+const availableSaleStock = computed(() => props.book.saleInventory || 0)
+// 是否可借阅
+const canBorrow = computed(() => availableBorrowStock.value > 0)
+// 是否可购买
+const canBuy = computed(() => availableSaleStock.value > 0)
 const bookPrice = computed(() => props.book.price ?? 39.9)
 
 function goToDetail() {
@@ -64,10 +71,10 @@ function handleAddToCart() {
       
       <!-- 库存状态徽标 -->
       <Badge 
-        :variant="isAvailable ? 'success' : 'destructive'"
+        :variant="canBorrow || canBuy ? 'success' : 'destructive'"
         class="absolute top-3 right-3"
       >
-        {{ isAvailable ? `库存 ${book.inventory}` : '暂无库存' }}
+        {{ canBorrow ? `可借 ${availableBorrowStock}` : (canBuy ? '仅售' : '暂无库存') }}
       </Badge>
     </div>
     
@@ -88,16 +95,19 @@ function handleAddToCart() {
         </div>
       </div>
       
-      <!-- 价格 -->
+      <!-- 价格和库存 -->
       <div class="flex items-center justify-between pt-2 border-t">
         <span class="text-lg font-bold text-primary">{{ formatCurrency(bookPrice) }}</span>
-        <span class="text-sm text-muted-foreground">库存 {{ book.inventory }}</span>
+        <div class="text-xs text-muted-foreground text-right">
+          <div>可借 {{ availableBorrowStock }}</div>
+          <div>可购 {{ availableSaleStock }}</div>
+        </div>
       </div>
       
       <!-- 操作按钮 -->
       <div v-if="showActions" class="flex gap-2">
         <Button
-          v-if="isAvailable"
+          v-if="canBorrow"
           class="flex-1"
           size="sm"
           @click.stop="emit('borrow', book)"
@@ -105,7 +115,7 @@ function handleAddToCart() {
           借阅
         </Button>
         <Button
-          v-if="isAvailable"
+          v-if="canBuy"
           variant="outline"
           size="sm"
           class="flex items-center gap-1"
@@ -115,7 +125,7 @@ function handleAddToCart() {
           购买
         </Button>
         <Button
-          v-if="!isAvailable"
+          v-if="!canBorrow && !canBuy"
           variant="outline"
           class="w-full"
           size="sm"

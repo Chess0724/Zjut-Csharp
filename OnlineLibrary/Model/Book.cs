@@ -33,11 +33,23 @@ public class Book
     [Required]
     public DateTime InboundDate { get; set; }
 
+    /// <summary>
+    /// 借阅库存（可借阅的数量）
+    /// </summary>
     [Required]
     public uint Inventory { get; set; }
 
+    /// <summary>
+    /// 已借出数量
+    /// </summary>
     [Required]
     public uint Borrowed { get; set; }
+
+    /// <summary>
+    /// 销售库存（可购买的数量，默认是借阅库存的10倍）
+    /// </summary>
+    [Required]
+    public uint SaleInventory { get; set; } = 100;
 
     /// <summary>
     /// 图书售价

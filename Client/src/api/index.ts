@@ -260,3 +260,37 @@ export const smartRecommendApi = {
   getUserStats: () =>
     api.get<ResultDto<UserPurchaseStats[]>>('/SmartRecommend/stats'),
 }
+
+// ==================== AI 功能相关 ====================
+
+export const aiApi = {
+  // 生成 AI 图书简介
+  generateBookSummary: (bookId: number) =>
+    api.get<BookAISummary>(`/AI/summary/${bookId}`),
+  
+  // 分析书籍适合度（需要登录）
+  analyzeBookSuitability: (bookId: number) =>
+    api.get<BookSuitability>(`/AI/suitability/${bookId}`),
+}
+
+// AI 类型定义
+export interface BookAISummary {
+  success: boolean
+  bookId: number
+  bookTitle: string
+  summary: string
+  generatedAt: string
+  hasUserContext: boolean
+  error?: string
+}
+
+export interface BookSuitability {
+  success: boolean
+  bookId: number
+  bookTitle: string
+  suitabilityScore: number
+  recommendation: string
+  analysis: string
+  reasons: string[]
+  error?: string
+}

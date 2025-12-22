@@ -53,6 +53,20 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('user', JSON.stringify(user.value))
       
       showLoginModal.value = false
+      
+      // 根据角色跳转到不同页面
+      if (role === 'Admin') {
+        router.push('/admin/dashboard')  // 管理员跳转到仪表盘
+      } else if (role === 'Moderator') {
+        router.push('/admin/books')  // 版主跳转到图书管理
+      } else {
+        // 普通用户保持在当前页面或跳转到首页
+        const currentRoute = router.currentRoute.value
+        if (currentRoute.path === '/login') {
+          router.push('/')
+        }
+      }
+      
       return true
     } catch {
       return false

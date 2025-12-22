@@ -251,16 +251,20 @@ public class UserController(
                 Message = "It seems that you haven't borrowed this book.",
                 Data = null
             };
+
+        // 创建借阅历史记录，设置导航属性
         var borrowHistory = new BorrowHistory
         {
             UserId = userId,
             BookId = bookId,
             BorrowDate = currentBorrow.BorrowDate,
-            ReturnDate = DateTime.Now
+            ReturnDate = DateTime.Now,
+            Book = book,  // 设置导航属性
+            User = user   // 设置导航属性
         };
         context.BorrowHistories.Add(borrowHistory);
         context.CurrentBorrows.Remove(currentBorrow);
-        // 归还时增加借阅次数
+        // 归还时增加库存和借阅统计次数
         book.Inventory++;
         book.Borrowed++;
         await context.SaveChangesAsync();

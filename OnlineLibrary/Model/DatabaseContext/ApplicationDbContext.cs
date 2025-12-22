@@ -45,8 +45,10 @@ public class ApplicationDbContext : IdentityDbContext<ApiUser>
             .IsRequired()
             .OnDelete(DeleteBehavior.NoAction);
 
+        // BorrowHistory 使用复合主键: BookId + UserId + BorrowDate
+        // 这样同一用户可以多次借阅同一本书
         modelBuilder.Entity<BorrowHistory>()
-            .HasKey(i => new { i.BookId, i.UserId });
+            .HasKey(i => new { i.BookId, i.UserId, i.BorrowDate });
 
         modelBuilder.Entity<BorrowHistory>()
             .HasOne(x => x.User)

@@ -169,8 +169,8 @@ public class OrderController(
                         return new ResultDto<OrderResponseDto> { Code = 1, Message = $"书籍ID {item.BookId} 不存在" };
                     }
 
-                    var availableStock = book.Inventory - book.Borrowed;
-                    if (item.Quantity > availableStock)
+                    // 检查库存（Inventory 就是当前可用库存）
+                    if (item.Quantity > book.Inventory)
                     {
                         return new ResultDto<OrderResponseDto> { Code = 2, Message = $"《{book.Title}》库存不足" };
                     }
@@ -194,8 +194,8 @@ public class OrderController(
                 // 检查库存
                 foreach (var item in cartItems)
                 {
-                    var availableStock = item.Book.Inventory - item.Book.Borrowed;
-                    if (item.Quantity > availableStock)
+                    // 检查库存（Inventory 就是当前可用库存）
+                    if (item.Quantity > item.Book.Inventory)
                     {
                         return new ResultDto<OrderResponseDto> { Code = 2, Message = $"《{item.Book.Title}》库存不足" };
                     }

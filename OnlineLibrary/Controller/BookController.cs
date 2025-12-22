@@ -15,7 +15,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
 {
     [Authorize]
     [HttpGet]
-    [ResponseCache(Location = ResponseCacheLocation.Any, Duration = 60)]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<ResultDto<Book[]>> GetBooks(
         int pageIndex = 0,
         int pageSize = 10,
@@ -53,7 +53,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
 
     [Authorize]
     [HttpGet("{id}")]
-    [ResponseCache(Location = ResponseCacheLocation.Any, Duration = 60)]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<ResultDto<Book>> GetBook(int id)
     {
         var book = await context.Books.FindAsync(id);
@@ -66,7 +66,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
                 Data = null
             };
         }
-        
+
         logger.LogInformation("Got book {BookId}: {Title}", id, book.Title);
         return new ResultDto<Book>
         {
@@ -174,7 +174,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
 
     [Authorize(Roles = RoleNames.Moderator)]
     [HttpGet("currentborrow")]
-    [ResponseCache(Location = ResponseCacheLocation.Any, Duration = 60)]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<ResultDto<BorrowDto[]>> GetCurrentBorrow(
         int pageIndex = 0,
         int pageSize = 10,
@@ -228,7 +228,7 @@ public class BookController(ILogger<BookController> logger, ApplicationDbContext
 
     [Authorize]
     [HttpGet("borrowhistory")]
-    [ResponseCache(Location = ResponseCacheLocation.Any, Duration = 60)]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<ResultDto<BorrowDto[]>> GetBorrowHistory(
         int pageIndex = 0,
         int pageSize = 10,

@@ -81,10 +81,8 @@ public class CartController(
                 return new ResultDto<string> { Code = 1, Message = "书籍不存在" };
             }
 
-            // 检查库存（避免 uint 溢出，先转为 long 计算）
-            var availableStock = (long)book.Inventory - (long)book.Borrowed;
-            if (availableStock < 0) availableStock = 0;
-            if (availableStock < request.Quantity)
+            // 检查库存（Inventory 就是当前可用库存）
+            if (book.Inventory < request.Quantity)
             {
                 return new ResultDto<string> { Code = 2, Message = "库存不足" };
             }
@@ -97,7 +95,7 @@ public class CartController(
             {
                 // 更新数量
                 var newQuantity = existingItem.Quantity + request.Quantity;
-                if (newQuantity > availableStock)
+                if (newQuantity > book.Inventory)
                 {
                     return new ResultDto<string> { Code = 2, Message = "库存不足，无法添加更多" };
                 }
@@ -153,10 +151,8 @@ public class CartController(
         }
         else
         {
-            // 检查库存（避免 uint 溢出）
-            var availableStock = (long)cartItem.Book.Inventory - (long)cartItem.Book.Borrowed;
-            if (availableStock < 0) availableStock = 0;
-            if (request.Quantity > availableStock)
+            // 检查库存（Inventory 就是当前可用库存）
+            if (request.Quantity > cartItem.Book.Inventory)
             {
                 return new ResultDto<string> { Code = 2, Message = "库存不足" };
             }

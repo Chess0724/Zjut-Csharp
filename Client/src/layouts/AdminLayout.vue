@@ -34,7 +34,7 @@ interface NavItem {
 }
 
 const navItems = computed<NavItem[]>(() => [
-  { name: '仪表盘', to: '/admin', icon: LayoutDashboard },
+  { name: '仪表盘', to: '/admin/dashboard', icon: LayoutDashboard, requiresRole: 'Admin' },
   { name: '图书管理', to: '/admin/books', icon: BookOpen },
   { name: '借阅管理', to: '/admin/borrows', icon: BookMarked },
   { name: '订单管理', to: '/admin/orders', icon: ShoppingBag },
@@ -63,8 +63,8 @@ function closeMobileSidebar() {
 }
 
 function isActive(path: string) {
-  if (path === '/admin') {
-    return route.path === '/admin'
+  if (path === '/admin/dashboard') {
+    return route.path === '/admin/dashboard' || route.path === '/admin'
   }
   return route.path.startsWith(path)
 }

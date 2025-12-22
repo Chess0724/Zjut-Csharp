@@ -69,9 +69,18 @@ const adminRoutes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
+        name: 'AdminDefault',
+        redirect: () => {
+          const authStore = useAuthStore()
+          // 管理员跳转到仪表盘，版主跳转到图书管理
+          return authStore.hasRole('Admin') ? '/admin/dashboard' : '/admin/books'
+        }
+      },
+      {
+        path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/admin/DashboardPage.vue'),
-        meta: { title: '仪表盘' }
+        meta: { title: '仪表盘', requiresRole: 'Admin' }
       },
       {
         path: 'books',

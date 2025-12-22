@@ -270,3 +270,28 @@ export interface OrderStatistics {
   totalSales: number
   todaySales: number
 }
+
+// ==================== 智能推荐相关 ====================
+
+// 书籍推荐响应
+export interface BookRecommendation {
+  id: number
+  title: string
+  author: string
+  publisher: string
+  publishedDate: string
+  identifier: string
+  categoryName: string
+  price: number
+  originalPrice?: number
+  inventory: number
+  recommendReason?: string
+}
+
+// 用户购买统计
+export interface UserPurchaseStats {
+  categoryCode: string
+  categoryName: string
+  purchaseCount: number
+  preferenceScore: number
+}

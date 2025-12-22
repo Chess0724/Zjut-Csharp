@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Card from '@/components/ui/Card.vue'
 import CardContent from '@/components/ui/CardContent.vue'
+import SmartRecommendation from '@/components/book/SmartRecommendation.vue'
 import { 
   Search, 
   BookOpen, 
@@ -141,6 +142,9 @@ function handleSearch() {
         </Card>
       </div>
     </section>
+
+    <!-- 智能推荐：猜你喜欢 -->
+    <SmartRecommendation />
     
     <!-- CTA Section -->
     <section class="bg-muted/50">

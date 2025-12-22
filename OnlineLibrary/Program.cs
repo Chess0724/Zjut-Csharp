@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using OnlineLibrary.Constant;
 using OnlineLibrary.Model;
 using OnlineLibrary.Model.DatabaseContext;
+using OnlineLibrary.Service;
 using Serilog;
 using System.Text;
 
@@ -125,6 +126,9 @@ builder.Services.AddDbContext<LogsDbContext>(opt =>
     opt.UseSqlite($"Filename={logDatabaseFilePath}");
 });
 
+// 注册书籍推荐服务
+builder.Services.AddScoped<BookRecommendationService>();
+
 var app = builder.Build();
 
 // Pre-warm the database connection by executing a simple query
@@ -148,17 +152,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/error",
-    [EnableCors("AnyOrigin")] [ResponseCache(NoStore = true)]
-    () => Results.Problem());
+    [EnableCors("AnyOrigin")][ResponseCache(NoStore = true)]
+() => Results.Problem());
 app.MapGet("/auth/test/1",
-    [Authorize] [EnableCors("AnyOrigin")] [ResponseCache(NoStore = true)]
-    () => Results.Ok("You are authorized, User!"));
+    [Authorize][EnableCors("AnyOrigin")][ResponseCache(NoStore = true)]
+() => Results.Ok("You are authorized, User!"));
 app.MapGet("/auth/test/2",
-    [Authorize(Roles = RoleNames.Moderator)] [EnableCors("AnyOrigin")] [ResponseCache(NoStore = true)]
-    () => Results.Ok("You are authorized, Moderator!"));
+    [Authorize(Roles = RoleNames.Moderator)][EnableCors("AnyOrigin")][ResponseCache(NoStore = true)]
+() => Results.Ok("You are authorized, Moderator!"));
 app.MapGet("/auth/test/3",
-    [Authorize(Roles = RoleNames.Admin)] [EnableCors("AnyOrigin")] [ResponseCache(NoStore = true)]
-    () => Results.Ok("You are authorized, Admin!"));
+    [Authorize(Roles = RoleNames.Admin)][EnableCors("AnyOrigin")][ResponseCache(NoStore = true)]
+() => Results.Ok("You are authorized, Admin!"));
 
 app.MapControllers();
 

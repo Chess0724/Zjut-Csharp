@@ -24,7 +24,9 @@ import type {
   OrderStatistics,
   CartItemDto,
   AddToCartRequest,
-  UpdateCartQuantityRequest
+  UpdateCartQuantityRequest,
+  BookRecommendation,
+  UserPurchaseStats
 } from '@/types'
 
 // ==================== 认证相关 ====================
@@ -245,4 +247,16 @@ export const orderApi = {
   // 管理员：获取订单统计
   getStatistics: () =>
     api.get<ResultDto<OrderStatistics>>('/order/statistics'),
+}
+
+// ==================== 智能推荐相关 ====================
+
+export const smartRecommendApi = {
+  // 获取个性化书籍推荐（猜你喜欢）
+  getRecommendations: (count: number = 10) =>
+    api.get<ResultDto<BookRecommendation[]>>('/SmartRecommend', { params: { count } }),
+  
+  // 获取用户购买偏好统计
+  getUserStats: () =>
+    api.get<ResultDto<UserPurchaseStats[]>>('/SmartRecommend/stats'),
 }

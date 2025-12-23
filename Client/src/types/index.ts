@@ -71,6 +71,12 @@ export interface LoginResponse {
 export interface RegisterRequest {
   userName: string
   password: string
+  email: string
+  verificationCode: string
+}
+
+export interface SendCodeRequest {
+  email: string
 }
 
 // 用户信息响应

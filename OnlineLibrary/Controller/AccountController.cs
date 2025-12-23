@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using OnlineLibrary.Constant;
 using OnlineLibrary.Dto;
 using OnlineLibrary.Model;
+using OnlineLibrary.Service;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -17,7 +18,9 @@ public class AccountController(
     ILogger<AccountController> logger,
     IConfiguration configuration,
     UserManager<ApiUser> userManager,
-    IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor,
+    EmailService emailService,
+    VerificationCodeService verificationCodeService)
     : ControllerBase
 {
     private string GetUserId()
@@ -39,6 +42,57 @@ public class AccountController(
         return userId;
     }
 
+    /// <summary>
+    /// 发送邮箱验证码
+    /// </summary>
+    [HttpPost]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<ActionResult> SendVerificationCode(SendCodeRequestDto input)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // 检查邮箱是否已被注册
+            var existingUser = await userManager.FindByEmailAsync(input.Email);
+            if (existingUser != null)
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, "该邮箱已被注册");
+            }
+
+            // 检查是否在冷却时间内
+            if (!verificationCodeService.CanSendCode(input.Email))
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, "发送过于频繁，请60秒后重试");
+            }
+
+            // 生成验证码
+            var code = verificationCodeService.GenerateCode(input.Email);
+
+            // 发送邮件
+            var success = await emailService.SendVerificationCodeAsync(input.Email, code);
+            if (!success)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "验证码发送失败，请稍后重试");
+            }
+
+            // 设置冷却时间
+            verificationCodeService.SetCooldown(input.Email);
+
+            logger.LogInformation("验证码已发送至 {Email}", input.Email);
+            return Ok(new { message = "验证码已发送" });
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "发送验证码失败");
+            return StatusCode(StatusCodes.Status500InternalServerError, "发送验证码时发生错误");
+        }
+    }
+
+
     [HttpPost]
     [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public async Task<ActionResult> Register(RegisterRequestDto input)
@@ -47,27 +101,41 @@ public class AccountController(
         {
             if (ModelState.IsValid)
             {
+                // 验证验证码
+                if (!verificationCodeService.ValidateCode(input.Email, input.VerificationCode))
+                {
+                    return StatusCode(StatusCodes.Status400BadRequest, "验证码错误或已过期");
+                }
+
+                // 检查用户名是否已存在
                 var user = await userManager.FindByNameAsync(input.UserName);
                 if (user != null)
-                    return StatusCode(StatusCodes.Status400BadRequest, "User already exists.");
+                    return StatusCode(StatusCodes.Status400BadRequest, "该用户名已被注册");
+
+                // 检查邮箱是否已被注册
+                var emailUser = await userManager.FindByEmailAsync(input.Email);
+                if (emailUser != null)
+                    return StatusCode(StatusCodes.Status400BadRequest, "该邮箱已被注册");
+
                 var newUser = new ApiUser
                 {
-                    UserName = input.UserName
+                    UserName = input.UserName,
+                    Email = input.Email,
+                    EmailConfirmed = true // 邮箱已通过验证码验证
                 };
                 var result = await userManager.CreateAsync(newUser, input.Password);
                 if (result.Succeeded)
                 {
                     // 新用户添加到普通用户组
                     await userManager.AddToRoleAsync(newUser, RoleNames.User);
-                    logger.LogInformation("User {userName} ({email}) has been created.", newUser.UserName,
-                        newUser.Email);
-                    return StatusCode(StatusCodes.Status201Created, $"User '{newUser.UserName}' has been created.");
+                    logger.LogInformation("用户 {userName} ({email}) 注册成功", newUser.UserName, newUser.Email);
+                    return StatusCode(StatusCodes.Status201Created, "注册成功");
                 }
                 var description = result.Errors.Select(error => error.Description).FirstOrDefault();
-                logger.LogWarning("User creation failed: {description}", string.Join(" ", description));
-                throw new Exception($"Error: {string.Join(" ", description)}");
+                logger.LogWarning("用户注册失败: {description}", string.Join(" ", description));
+                throw new Exception($"注册失败: {string.Join(" ", description)}");
             }
-            logger.LogWarning("User creation failed: {description}", string.Join(" ", ModelState.Values
+            logger.LogWarning("用户注册失败: {description}", string.Join(" ", ModelState.Values
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage)));
             var details = new ValidationProblemDetails(ModelState)
@@ -79,7 +147,7 @@ public class AccountController(
         }
         catch (Exception e)
         {
-            logger.LogWarning("User creation failed: {description}", e.Message);
+            logger.LogWarning("用户注册失败: {description}", e.Message);
             var exceptionDetails = new ProblemDetails
             {
                 Detail = e.Message,
@@ -89,6 +157,7 @@ public class AccountController(
             return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
         }
     }
+
 
     [HttpPost]
     [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]

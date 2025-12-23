@@ -133,6 +133,13 @@ builder.Services.AddScoped<BookRecommendationService>();
 builder.Services.AddHttpClient<AIService>();
 builder.Services.AddScoped<AIService>();
 
+// 注册邮件服务和验证码服务
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<VerificationCodeService>();
+
+
 var app = builder.Build();
 
 // Pre-warm the database connection by executing a simple query

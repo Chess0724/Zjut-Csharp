@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import Dialog from '@/components/ui/Dialog.vue'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
-import { Lock, User } from 'lucide-vue-next'
+import { Lock, User, Mail, ShieldCheck } from 'lucide-vue-next'
 
 const authStore = useAuthStore()
 const toastStore = useToastStore()
@@ -14,13 +14,63 @@ const mode = ref<'login' | 'register'>('login')
 const userName = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const email = ref('')
+const verificationCode = ref('')
+
+// 验证码倒计时
+const countdown = ref(0)
+let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+// 是否正在发送验证码
+const sendingCode = ref(false)
+
+// 邮箱格式验证
+const isEmailValid = computed(() => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailPattern.test(email.value)
+})
+
+// 是否可以发送验证码
+const canSendCode = computed(() => {
+  return isEmailValid.value && countdown.value === 0 && !sendingCode.value
+})
 
 const isFormValid = computed(() => {
   if (mode.value === 'login') {
     return userName.value.trim() && password.value
   }
-  return userName.value.trim() && password.value && password.value === confirmPassword.value
+  return userName.value.trim() && 
+         password.value && 
+         password.value.length >= 6 &&
+         password.value === confirmPassword.value &&
+         isEmailValid.value &&
+         verificationCode.value.trim()
 })
+
+async function sendCode() {
+  if (!canSendCode.value) return
+  
+  sendingCode.value = true
+  const result = await authStore.sendVerificationCode(email.value)
+  sendingCode.value = false
+  
+  if (result.success) {
+    toastStore.success('验证码已发送，请查收邮箱')
+    // 开始倒计时
+    countdown.value = 60
+    countdownTimer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        if (countdownTimer) {
+          clearInterval(countdownTimer)
+          countdownTimer = null
+        }
+      }
+    }, 1000)
+  } else {
+    toastStore.error(result.message)
+  }
+}
 
 async function handleSubmit() {
   if (!isFormValid.value) return
@@ -36,11 +86,20 @@ async function handleSubmit() {
       toastStore.error('两次输入的密码不一致')
       return
     }
-    const success = await authStore.register(userName.value, password.value)
+    if (password.value.length < 6) {
+      toastStore.error('密码长度不能少于6位')
+      return
+    }
+    const success = await authStore.register(userName.value, password.value, email.value, verificationCode.value)
     if (success) {
       toastStore.success('注册成功，请登录')
       mode.value = 'login'
       password.value = ''
+      confirmPassword.value = ''
+      email.value = ''
+      verificationCode.value = ''
+    } else {
+      toastStore.error('注册失败，请检查验证码是否正确')
     }
   }
 }
@@ -54,6 +113,8 @@ function resetForm() {
   userName.value = ''
   password.value = ''
   confirmPassword.value = ''
+  email.value = ''
+  verificationCode.value = ''
 }
 
 function handleClose() {
@@ -61,6 +122,12 @@ function handleClose() {
   resetForm()
   mode.value = 'login'
 }
+
+onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+  }
+})
 </script>
 
 <template>
@@ -84,6 +151,46 @@ function handleClose() {
           />
         </div>
       </div>
+
+      <!-- 邮箱（仅注册） -->
+      <div v-if="mode === 'register'" class="space-y-2">
+        <label class="text-sm font-medium">邮箱</label>
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <Mail class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              v-model="email"
+              type="email"
+              placeholder="请输入邮箱"
+              class="pl-10"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            :disabled="!canSendCode"
+            :loading="sendingCode"
+            @click="sendCode"
+            class="whitespace-nowrap min-w-[100px]"
+          >
+            {{ countdown > 0 ? `${countdown}s` : '发送验证码' }}
+          </Button>
+        </div>
+      </div>
+
+      <!-- 验证码（仅注册） -->
+      <div v-if="mode === 'register'" class="space-y-2">
+        <label class="text-sm font-medium">验证码</label>
+        <div class="relative">
+          <ShieldCheck class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            v-model="verificationCode"
+            placeholder="请输入6位验证码"
+            maxlength="6"
+            class="pl-10"
+          />
+        </div>
+      </div>
       
       <!-- 密码 -->
       <div class="space-y-2">
@@ -93,7 +200,7 @@ function handleClose() {
           <Input
             v-model="password"
             type="password"
-            placeholder="请输入密码"
+            :placeholder="mode === 'register' ? '请输入密码（至少6位）' : '请输入密码'"
             class="pl-10"
           />
         </div>
@@ -139,3 +246,4 @@ function handleClose() {
     </form>
   </Dialog>
 </template>
+

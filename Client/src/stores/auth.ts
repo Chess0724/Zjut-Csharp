@@ -20,12 +20,12 @@ export const useAuthStore = defineStore('auth', () => {
   const showLoginModal = ref(false)
 
   const isLoggedIn = computed(() => !!token.value)
-  
-  const isAdmin = computed(() => 
+
+  const isAdmin = computed(() =>
     user.value?.role === 'Admin'
   )
-  
-  const isModerator = computed(() => 
+
+  const isModerator = computed(() =>
     user.value?.role === 'Moderator' || user.value?.role === 'Admin'
   )
 
@@ -45,15 +45,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authApi.login({ account, password })
       const { token: newToken, userName, role, avatar } = response.data
-      
+
       token.value = newToken
       user.value = { userName, role, avatar }
-      
+
       localStorage.setItem('token', newToken)
       localStorage.setItem('user', JSON.stringify(user.value))
-      
+
       showLoginModal.value = false
-      
+
       // 根据角色跳转到不同页面
       if (role === 'Admin') {
         router.push('/admin/dashboard')  // 管理员跳转到仪表盘
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
           router.push('/')
         }
       }
-      
+
       return true
     } catch {
       return false
@@ -75,10 +75,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(userName: string, password: string) {
+  async function register(userName: string, password: string, email: string, verificationCode: string) {
     isLoading.value = true
     try {
-      await authApi.register({ userName, password })
+      await authApi.register({ userName, password, email, verificationCode })
       return true
     } catch {
       return false
@@ -86,6 +86,22 @@ export const useAuthStore = defineStore('auth', () => {
       isLoading.value = false
     }
   }
+
+  async function sendVerificationCode(email: string) {
+    try {
+      await authApi.sendVerificationCode({ email })
+      return { success: true, message: '验证码已发送' }
+    } catch (error: any) {
+      let message = '发送验证码失败'
+      if (error.response?.status === 400) {
+        message = error.response.data || '该邮箱已被注册'
+      } else if (error.response?.status === 429) {
+        message = '发送过于频繁，请60秒后重试'
+      }
+      return { success: false, message }
+    }
+  }
+
 
   async function fetchUserInfo() {
     if (!token.value) return
@@ -129,6 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasRole,
     login,
     register,
+    sendVerificationCode,
     logout,
     fetchUserInfo,
     openLoginModal,

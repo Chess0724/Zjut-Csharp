@@ -28,10 +28,17 @@
             <v-btn :color="skyColor" class="w-25 mx-auto" type="submit" :disabled="submitButtonDisabled"
               :loading="submitButtonLoading" @click="onLoginSubmit">登录</v-btn>
           </v-row>
+          <v-row class="mt-4">
+            <v-col class="text-center">
+              <router-link to="/admin-login" class="admin-link">
+                管理员入口 →
+              </router-link>
+            </v-col>
+          </v-row>
         </v-container>
       </v-form>
     </v-row>
-    <v-snackbar v-model="snackbar" timeout="5000" rounded="pill" :color="skyColor">
+    <v-snackbar v-model="snackbar" timeout="5000" rounded="pill" :color="snackbarColor">
       {{ loginPrompt }}
     </v-snackbar>
   </v-container>
@@ -51,6 +58,7 @@ const userAccount = ref<string>('')
 const password = ref<string>('')
 
 const snackbar = ref<boolean>(false)
+const snackbarColor = ref<string>(skyColor)
 const loginPrompt = ref<string>('')
 
 const router = useRouter()
@@ -84,10 +92,15 @@ function onLoginSubmit() {
 
     if (userType === 'User') {
       router.push('/user');
-    } else if (userType === 'Admin') {
-      router.push('/admin');
+    } else if (userType === 'Admin' || userType === 'Moderator') {
+      // 管理员应使用管理员入口登录
+      loginPrompt.value = "管理员请使用管理员入口登录";
+      snackbarColor.value = '#e74c3c';
+      snackbar.value = true;
+      window.localStorage.removeItem("token");
     } else {
-      loginPrompt.value = "暂不支持此用户类型登录：" + userType.value;
+      loginPrompt.value = "暂不支持此用户类型登录：" + userType;
+      snackbarColor.value = '#e74c3c';
       snackbar.value = true;
     }
   }).catch((error) => {
@@ -101,6 +114,7 @@ function onLoginSubmit() {
       message = error.message
     }
     loginPrompt.value = "遇到错误：" + message;
+    snackbarColor.value = '#e74c3c';
     snackbar.value = true;
     console.error('尝试注册时遇到错误：', error);
   })
@@ -130,5 +144,16 @@ function onLoginSubmit() {
   margin-top: 15px;
   justify-content: center;
   vertical-align: center;
+}
+
+.admin-link {
+  color: rgba(128, 128, 128, 0.8);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.3s;
+}
+
+.admin-link:hover {
+  color: #4CAF50;
 }
 </style>

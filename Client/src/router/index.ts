@@ -126,6 +126,12 @@ const routes: RouteRecordRaw[] = [
   ...readerRoutes,
   ...adminRoutes,
   {
+    path: '/admin-login',
+    name: 'AdminLogin',
+    component: () => import('@/views/AdminLoginPage.vue'),
+    meta: { title: '管理员登录' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFoundPage.vue'),
@@ -148,15 +154,15 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   // 设置页面标题
   document.title = `${to.meta.title || '网上图书馆'} - 网上图书馆`
-  
+
   const authStore = useAuthStore()
-  
+
   // 检查是否需要登录
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     authStore.openLoginModal()
     return next({ name: 'Home' })
   }
-  
+
   // 检查角色权限
   if (to.meta.requiresRole) {
     const requiredRole = to.meta.requiresRole as string
@@ -164,7 +170,7 @@ router.beforeEach((to, _from, next) => {
       return next({ name: 'Home' })
     }
   }
-  
+
   next()
 })
 

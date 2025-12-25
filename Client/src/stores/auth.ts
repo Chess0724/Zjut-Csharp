@@ -119,11 +119,20 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    // 保存当前角色用于决定跳转目标
+    const wasAdmin = user.value?.role === 'Admin' || user.value?.role === 'Moderator'
+
     token.value = null
     user.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    router.push('/')
+
+    // 根据之前的角色跳转到对应登录页
+    if (wasAdmin) {
+      router.push('/admin-login')
+    } else {
+      router.push('/')
+    }
   }
 
   function openLoginModal() {

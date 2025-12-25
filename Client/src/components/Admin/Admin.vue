@@ -106,7 +106,7 @@ function logout() {
   window.localStorage.removeItem("id");
   window.localStorage.removeItem("token");
   window.localStorage.removeItem("avatar");
-  router.push('/');
+  router.push('/admin-login');
 }
 
 onMounted(() => {

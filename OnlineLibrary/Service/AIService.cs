@@ -20,7 +20,7 @@ public class AIService
     // 通义千问配置
     private const string ApiBaseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
     private const string ModelName = "qwen-flash";
-    private const string ApiKey = "sk-3ced0a49f092423fb141fd614cf1e5a7";
+    private const string ApiKey = "sk-f68c591f97414695859088920ceb43a4";
 
     public AIService(
         ApplicationDbContext context,

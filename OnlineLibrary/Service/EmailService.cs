@@ -71,4 +71,56 @@ public class EmailService
             return false;
         }
     }
+
+    /// <summary>
+    /// 发送密码重置验证码邮件
+    /// </summary>
+    /// <param name="toEmail">收件人邮箱</param>
+    /// <param name="code">验证码</param>
+    /// <returns>是否发送成功</returns>
+    public async Task<bool> SendPasswordResetCodeAsync(string toEmail, string code)
+    {
+        try
+        {
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress("网上图书馆", _settings.Sender));
+            message.To.Add(new MailboxAddress("", toEmail));
+            message.Subject = "【网上图书馆】密码重置验证码";
+
+            var bodyBuilder = new BodyBuilder
+            {
+                HtmlBody = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+                    <h2 style='color: #333; text-align: center;'>网上图书馆 - 密码重置</h2>
+                    <div style='background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); padding: 30px; border-radius: 10px; text-align: center;'>
+                        <p style='color: #fff; font-size: 16px; margin-bottom: 20px;'>您的密码重置验证码是：</p>
+                        <div style='background: #fff; display: inline-block; padding: 15px 40px; border-radius: 8px;'>
+                            <span style='font-size: 32px; font-weight: bold; color: #4CAF50; letter-spacing: 8px;'>{code}</span>
+                        </div>
+                        <p style='color: #fff; font-size: 14px; margin-top: 20px;'>验证码有效期为 5 分钟，请尽快完成密码重置。</p>
+                    </div>
+                    <p style='color: #999; font-size: 12px; text-align: center; margin-top: 20px;'>
+                        如果这不是您的操作，请忽略此邮件并确保您的账号安全。
+                    </p>
+                </div>"
+            };
+
+            message.Body = bodyBuilder.ToMessageBody();
+
+            using var client = new SmtpClient();
+            
+            await client.ConnectAsync(_settings.Host, _settings.Port, SecureSocketOptions.SslOnConnect);
+            await client.AuthenticateAsync(_settings.Sender, _settings.Password);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation("密码重置验证码邮件已发送至 {Email}", toEmail);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "发送密码重置邮件失败: {Email}", toEmail);
+            return false;
+        }
+    }
 }

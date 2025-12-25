@@ -314,4 +314,102 @@ public class AccountController(
             }
         };
     }
+
+    /// <summary>
+    /// 发送密码重置验证码
+    /// </summary>
+    [HttpPost]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<ActionResult> SendResetCode(SendCodeRequestDto input)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // 检查邮箱是否已注册（必须已注册才能重置密码）
+            var existingUser = await userManager.FindByEmailAsync(input.Email);
+            if (existingUser == null)
+            {
+                return StatusCode(StatusCodes.Status404NotFound, "该邮箱未注册");
+            }
+
+            // 检查是否在冷却时间内
+            if (!verificationCodeService.CanSendCode(input.Email))
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, "发送过于频繁，请60秒后重试");
+            }
+
+            // 生成验证码
+            var code = verificationCodeService.GenerateCode(input.Email);
+
+            // 发送密码重置邮件
+            var success = await emailService.SendPasswordResetCodeAsync(input.Email, code);
+            if (!success)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "验证码发送失败，请稍后重试");
+            }
+
+            // 设置冷却时间
+            verificationCodeService.SetCooldown(input.Email);
+
+            logger.LogInformation("密码重置验证码已发送至 {Email}", input.Email);
+            return Ok(new { message = "验证码已发送" });
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "发送密码重置验证码失败");
+            return StatusCode(StatusCodes.Status500InternalServerError, "发送验证码时发生错误");
+        }
+    }
+
+    /// <summary>
+    /// 重置密码
+    /// </summary>
+    [HttpPost]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<ActionResult> ResetPassword(ResetPasswordDto input)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // 验证验证码
+            if (!verificationCodeService.ValidateCode(input.Email, input.VerificationCode))
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, "验证码错误或已过期");
+            }
+
+            // 查找用户
+            var user = await userManager.FindByEmailAsync(input.Email);
+            if (user == null)
+            {
+                return StatusCode(StatusCodes.Status404NotFound, "用户不存在");
+            }
+
+            // 重置密码
+            await userManager.RemovePasswordAsync(user);
+            var result = await userManager.AddPasswordAsync(user, input.NewPassword);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                logger.LogWarning("密码重置失败: {Errors}", errors);
+                return StatusCode(StatusCodes.Status400BadRequest, $"密码重置失败: {errors}");
+            }
+
+            logger.LogInformation("用户 {Email} 密码重置成功", input.Email);
+            return Ok(new { message = "密码重置成功" });
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "密码重置失败");
+            return StatusCode(StatusCodes.Status500InternalServerError, "密码重置时发生错误");
+        }
+    }
 }

@@ -42,6 +42,12 @@ export const authApi = {
   sendVerificationCode: (data: SendCodeRequest) =>
     api.post('/Account/SendVerificationCode', data),
 
+  sendResetCode: (data: SendCodeRequest) =>
+    api.post('/Account/SendResetCode', data),
+
+  resetPassword: (data: { email: string; verificationCode: string; newPassword: string }) =>
+    api.post('/Account/ResetPassword', data),
+
   getInfo: () =>
     api.get<GetInfoResponse>('/Account/GetInfo'),
 

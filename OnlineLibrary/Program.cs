@@ -139,6 +139,9 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<VerificationCodeService>();
 
+// 注册 Excel 导入导出服务
+builder.Services.AddScoped<ExcelService>();
+
 
 var app = builder.Build();
 

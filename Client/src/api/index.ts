@@ -304,3 +304,50 @@ export interface BookSuitability {
   reasons: string[]
   error?: string
 }
+
+// ==================== Excel 导入导出相关 ====================
+
+export interface BookImportResult {
+  totalRows: number
+  successCount: number
+  failCount: number
+  errors: ImportError[]
+}
+
+export interface ImportError {
+  row: number
+  field: string
+  message: string
+}
+
+export const excelApi = {
+  // 导出图书
+  exportBooks: () =>
+    api.get('/Excel/books', { responseType: 'blob' }),
+
+  // 导出用户（仅管理员）
+  exportUsers: () =>
+    api.get('/Excel/users', { responseType: 'blob' }),
+
+  // 导出订单
+  exportOrders: () =>
+    api.get('/Excel/orders', { responseType: 'blob' }),
+
+  // 导出借阅历史
+  exportBorrows: () =>
+    api.get('/Excel/borrows', { responseType: 'blob' }),
+
+  // 下载导入模板
+  downloadTemplate: () =>
+    api.get('/Excel/template/books', { responseType: 'blob' }),
+
+  // 导入图书
+  importBooks: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post<BookImportResult>('/Excel/books', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+}
+

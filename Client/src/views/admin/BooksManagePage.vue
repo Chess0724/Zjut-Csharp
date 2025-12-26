@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Dialog from '@/components/ui/Dialog.vue'
+import ExcelImportExport from '@/components/Admin/ExcelImportExport.vue'
 import { bookApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -177,10 +178,14 @@ onMounted(() => {
         <h1 class="text-2xl font-bold">图书管理</h1>
         <p class="text-muted-foreground">管理馆藏图书信息</p>
       </div>
-      <Button @click="openAddDialog">
-        <Plus class="h-4 w-4 mr-2" />
-        添加图书
-      </Button>
+      <div class="flex items-center gap-3">
+        <!-- Excel 导入导出 -->
+        <ExcelImportExport type="books" @refresh="fetchBooks" />
+        <Button @click="openAddDialog">
+          <Plus class="h-4 w-4 mr-2" />
+          添加图书
+        </Button>
+      </div>
     </div>
     
     <!-- 搜索栏 -->

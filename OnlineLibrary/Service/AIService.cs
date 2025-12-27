@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using OnlineLibrary.Dto;
 using OnlineLibrary.Model;
 using OnlineLibrary.Model.DatabaseContext;
 
@@ -20,6 +21,7 @@ public class AIService
     // 通义千问配置
     private const string ApiBaseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
     private const string ModelName = "qwen-flash";
+    private const string VisionModelName = "qwen-vl-plus";  // 视觉模型
     private const string ApiKey = "sk-f68c591f97414695859088920ceb43a4";
 
     public AIService(
@@ -316,6 +318,165 @@ public class AIService
             Analysis = aiResponse,
             Reasons = new List<string>()
         };
+    }
+
+    /// <summary>
+    /// 从图片中提取图书信息（使用视觉模型）
+    /// </summary>
+    public async Task<BookInfoFromImageDto> ExtractBookInfoFromImageAsync(string base64Image)
+    {
+        try
+        {
+            // 移除 data:image/xxx;base64, 前缀
+            var imageData = base64Image;
+            if (base64Image.Contains(","))
+            {
+                imageData = base64Image.Split(',')[1];
+            }
+
+            var systemPrompt = @"你是一个图书信息提取助手。请仔细观察图片中的图书封面或版权页，提取以下信息并以JSON格式返回：
+
+{
+  ""title"": ""书名"",
+  ""author"": ""作者"",
+  ""publisher"": ""出版社"",
+  ""publishedDate"": ""出版日期（格式：YYYY-MM 或 YYYY）"",
+  ""isbn"": ""ISBN号"",
+  ""price"": ""定价（纯数字，如 59.00）""
+}
+
+注意：
+1. 如果某项信息无法识别，请填写 null
+2. 价格只需要数字，不需要货币符号
+3. 严格返回JSON格式，不要添加其他文字";
+
+            var requestBody = new
+            {
+                model = VisionModelName,
+                messages = new object[]
+                {
+                    new
+                    {
+                        role = "user",
+                        content = new object[]
+                        {
+                            new { type = "text", text = systemPrompt },
+                            new
+                            {
+                                type = "image_url",
+                                image_url = new { url = $"data:image/jpeg;base64,{imageData}" }
+                            }
+                        }
+                    }
+                },
+                max_tokens = 1000
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBaseUrl}/chat/completions")
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(requestBody),
+                    Encoding.UTF8,
+                    "application/json")
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+            _logger.LogInformation("调用视觉模型 API: {Model}", VisionModelName);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            var response = await _httpClient.SendAsync(request, cts.Token);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            _logger.LogInformation("视觉模型 API 响应状态: {StatusCode}", response.StatusCode);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("视觉模型 API 调用失败: {StatusCode} - {Content}",
+                    response.StatusCode, responseContent);
+                return new BookInfoFromImageDto
+                {
+                    Success = false,
+                    Error = $"AI 服务调用失败（错误码: {response.StatusCode}）"
+                };
+            }
+
+            var jsonResponse = JsonDocument.Parse(responseContent);
+            var content = jsonResponse.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+
+            _logger.LogInformation("视觉模型返回内容: {Content}", content);
+
+            if (string.IsNullOrEmpty(content))
+            {
+                return new BookInfoFromImageDto
+                {
+                    Success = false,
+                    Error = "无法识别图片内容"
+                };
+            }
+
+            // 尝试解析 JSON
+            try
+            {
+                // 处理可能包含 markdown 代码块的情况
+                var jsonStr = content;
+                if (jsonStr.Contains("```json"))
+                {
+                    jsonStr = jsonStr.Split("```json")[1].Split("```")[0].Trim();
+                }
+                else if (jsonStr.Contains("```"))
+                {
+                    jsonStr = jsonStr.Split("```")[1].Split("```")[0].Trim();
+                }
+
+                var bookInfo = JsonSerializer.Deserialize<JsonElement>(jsonStr);
+
+                return new BookInfoFromImageDto
+                {
+                    Success = true,
+                    Title = bookInfo.TryGetProperty("title", out var t) && t.ValueKind != JsonValueKind.Null ? t.GetString() : null,
+                    Author = bookInfo.TryGetProperty("author", out var a) && a.ValueKind != JsonValueKind.Null ? a.GetString() : null,
+                    Publisher = bookInfo.TryGetProperty("publisher", out var p) && p.ValueKind != JsonValueKind.Null ? p.GetString() : null,
+                    PublishedDate = bookInfo.TryGetProperty("publishedDate", out var pd) && pd.ValueKind != JsonValueKind.Null ? pd.GetString() : null,
+                    ISBN = bookInfo.TryGetProperty("isbn", out var i) && i.ValueKind != JsonValueKind.Null ? i.GetString() : null,
+                    Price = bookInfo.TryGetProperty("price", out var pr) && pr.ValueKind != JsonValueKind.Null
+                        ? (decimal.TryParse(pr.ToString(), out var price) ? price : null)
+                        : null,
+                    RawText = content
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "解析视觉模型返回的 JSON 失败");
+                return new BookInfoFromImageDto
+                {
+                    Success = true,
+                    RawText = content,
+                    Error = "JSON 解析失败，请查看原始识别结果手动输入"
+                };
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            _logger.LogError("视觉模型 API 调用超时");
+            return new BookInfoFromImageDto
+            {
+                Success = false,
+                Error = "AI 服务响应超时，请稍后重试"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "视觉模型 API 调用异常");
+            return new BookInfoFromImageDto
+            {
+                Success = false,
+                Error = $"AI 服务出错: {ex.Message}"
+            };
+        }
     }
 }
 

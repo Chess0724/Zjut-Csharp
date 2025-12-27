@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OnlineLibrary.Constant;
+using OnlineLibrary.Dto;
 using OnlineLibrary.Service;
 using System.Security.Claims;
 
@@ -91,4 +93,43 @@ public class AIController : ControllerBase
             return StatusCode(500, new { error = "AI 服务暂时不可用，请稍后重试" });
         }
     }
+
+    /// <summary>
+    /// 从图片中提取图书信息
+    /// </summary>
+    /// <param name="request">包含 Base64 编码图片的请求</param>
+    /// <returns>识别出的图书信息</returns>
+    [HttpPost("extract-book")]
+    [Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Moderator}")]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<ActionResult<BookInfoFromImageDto>> ExtractBookFromImage([FromBody] ImageUploadRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.Base64Image))
+            {
+                return BadRequest(new BookInfoFromImageDto
+                {
+                    Success = false,
+                    Error = "请上传图片"
+                });
+            }
+
+            _logger.LogInformation("开始从图片中提取图书信息");
+
+            var result = await _aiService.ExtractBookInfoFromImageAsync(request.Base64Image);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "从图片提取图书信息失败");
+            return StatusCode(500, new BookInfoFromImageDto
+            {
+                Success = false,
+                Error = "AI 服务暂时不可用，请稍后重试"
+            });
+        }
+    }
 }
+

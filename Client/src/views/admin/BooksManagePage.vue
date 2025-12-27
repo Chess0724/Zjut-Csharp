@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import ExcelImportExport from '@/components/Admin/ExcelImportExport.vue'
+import VisionBookImport from '@/components/Admin/VisionBookImport.vue'
 import { bookApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -179,6 +180,8 @@ onMounted(() => {
         <p class="text-muted-foreground">管理馆藏图书信息</p>
       </div>
       <div class="flex items-center gap-3">
+        <!-- 拍照导入 -->
+        <VisionBookImport @refresh="fetchBooks" />
         <!-- Excel 导入导出 -->
         <ExcelImportExport type="books" @refresh="fetchBooks" />
         <Button @click="openAddDialog">

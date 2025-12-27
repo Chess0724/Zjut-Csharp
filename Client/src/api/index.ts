@@ -281,6 +281,23 @@ export const aiApi = {
   // 分析书籍适合度（需要登录）
   analyzeBookSuitability: (bookId: number) =>
     api.get<BookSuitability>(`/AI/suitability/${bookId}`),
+
+  // 从图片提取图书信息（拍照导入）
+  extractBookFromImage: (base64Image: string) =>
+    api.post<BookInfoFromImage>('/AI/extract-book', { base64Image }),
+}
+
+// AI 类型定义
+export interface BookInfoFromImage {
+  success: boolean
+  title?: string
+  author?: string
+  publisher?: string
+  publishedDate?: string
+  isbn?: string
+  price?: number
+  rawText?: string
+  error?: string
 }
 
 // AI 类型定义
